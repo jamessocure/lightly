@@ -2,6 +2,7 @@ import warnings
 from io import IOBase
 from typing import *
 import platform
+import os
 
 import requests
 from lightly.api.api_workflow_tags import _TagsMixin
@@ -214,10 +215,14 @@ class ApiWorkflowClient(_UploadEmbeddingsMixin,
 
         """
         sess = session or requests
-        if headers is not None:
-            response = sess.put(signed_write_url, data=file, headers=headers)
-        else:
-            response = sess.put(signed_write_url, data=file)
+        if headers is None:
+            headers = {}
+        lightly_s3_kms_key_id = os.environ.get('LIGHTLY_S3_KMS_KEY_ID', '').strip()
+        if lightly_s3_kms_key_id != '':
+            headers['x-amz-server-side-encryption'] = 'aws:kms'
+            headers['x-amz-server-side-encryption-aws-kms-key-id'] = lightly_s3_kms_key_id
+
+        response = sess.put(signed_write_url, data=file, headers=headers)
         response.raise_for_status()
         return response
 
